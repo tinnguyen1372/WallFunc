@@ -18,7 +18,7 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
-        self.num_scan = 1
+        self.num_scan = 20
 
     
         self.square_size = args.square_size
