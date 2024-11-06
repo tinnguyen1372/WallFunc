@@ -1,0 +1,349 @@
+from gprMax.gprMax import api
+from gprMax.receivers import Rx
+from tools.outputfiles_merge import merge_files
+from tools.plot_Bscan import get_output_data, mpl_plot as mpl_plot_Bscan 
+from tools.plot_Ascan import mpl_plot as mpl_plot_Ascan
+from gprMax.receivers import Rx
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
+import argparse
+import random
+import os
+
+
+
+class Wall_Func():
+    def __init__(self, args) -> None:
+        self.args = args
+        self.i = args.i
+        self.restart = 1
+        self.num_scan = 60
+
+    
+        self.square_size = args.square_size
+        self.wall_thickness = args.wall_thickness
+        # self.wall_height = args.wall_height
+        self.wall_permittivity = args.wall_permittivity
+        self.object_permittivity = args.object_permittivity
+        self.object_width = args.obj_width
+        self.object_height = args.obj_height
+
+        # Geometry load
+        self.base = os.getcwd() + '/Geometry/Base'
+        self.basefile = self.base + '/base{}.png'.format(i)
+        self.geofolder = os.getcwd() + '/Geometry/Object'
+        self.geofile = self.geofolder + '/geometry{}.png'.format(i)
+
+        # Data load
+        self.pix = int(self.square_size/0.002)
+        if not os.path.exists('./Input'):
+            os.makedirs('./Input')        
+        if not os.path.exists('./Input/Base'):
+            os.makedirs('./Input/Base')
+        if not os.path.exists('./Input/Object'):
+            os.makedirs('./Input/Object')
+        if not os.path.exists('./Output'):
+            os.makedirs('./Output')
+        if not os.path.exists('./Output/Base'):
+            os.makedirs('./Output/Base')
+        if not os.path.exists('./Output/Object'):
+            os.makedirs('./Output/Object')
+        if not os.path.exists('./BaseImg'):
+            os.makedirs('./BaseImg')
+        if not os.path.exists('./ObjImg'):
+            os.makedirs('./ObjImg')
+    def view_geometry(self):
+        import numpy.ma as ma
+        # Create a 5000x5000 array initialized with -1
+        large_array = np.full((1740, 1740), 1, dtype=int)
+        # Open the HDF5 file
+        with h5py.File('./Input/Base.h5', 'r') as f:
+            data = f['data'][:]
+        print(data.shape)
+        # Print the raw data for reference
+        # print(data)  # Use data[:] to display the full array
+        data = np.squeeze(data, axis=2)
+        # Override the values in the large array with the data
+        large_array[0:0 + data.shape[0], 0:0 + data.shape[1]] = data
+
+        # Create a masked array where values of -1 are masked (transparent)
+        masked_data = ma.masked_where(large_array == 1, large_array)
+
+        # Set the extent to match the pixel dimensions of the data (5000x5000)
+        extent = [0, 1740, 0, 1740]
+
+        # Generate the image with origin set to 'lower' to match the (0,0) origin at the bottom-left
+        plt.imshow(masked_data, cmap='viridis', extent=extent)
+
+        # # Add a colorbar for reference
+        # cbar = plt.colorbar()
+        # cbar.set_label('Value')
+        plt.axis('equal')
+
+        # Set the plot limits to show the full 5000x5000 region
+        plt.xlim(0, 2000)
+        plt.ylim(0, 2000)
+
+        # Display the plot with labeled axes
+        plt.title("Geometry Visualization")
+        # plt.xlabel("X-axis (pixels)")
+        # plt.ylabel("Y-axis (pixels)")
+        plt.show()
+
+    def preprocess(self, filename):
+        from PIL import Image
+        import numpy as np
+        import h5py
+
+        img = Image.open(filename).convert('RGBA')  # Convert the image to RGBA mode
+
+        # Define the color map with a tolerance
+        color_map = {
+            (255, 255, 255): -1,  # White (transparent)
+            (255, 255, 0): 0,     # Yellow
+            (255, 102, 0): 1      # Orange
+        }
+        tolerance = 5
+
+        def match_color(pixel, color_map, tolerance):
+            for color, value in color_map.items():
+                if all(abs(pixel[i] - color[i]) <= tolerance for i in range(3)):
+                    return value
+            return -1  # Default value if no match is found
+
+        arr_2d = np.zeros((self.pix, self.pix), dtype=int)
+        img_resized = img.resize((self.pix, self.pix))
+
+        for y in range(self.pix):
+            for x in range(self.pix):
+                pixel_color = img_resized.getpixel((x, y))
+                arr_2d[y, x] = match_color(pixel_color, color_map, tolerance)
+
+        # np.savetxt('output_array.txt', arr_2d, fmt='%d', delimiter=' ')
+        self.filename = 'geometry_2d.h5'
+        arr_3d = np.expand_dims(arr_2d, axis=2)
+
+        with h5py.File('./Geometry/' + self.filename, 'w') as file:
+            dset = file.create_dataset("data", data=arr_3d)
+            file.attrs['dx_dy_dz'] = (0.002, 0.002, 0.002)
+
+    def run_base(self):
+
+        # Run gprMax
+        self.input = './Input/Base{}.in'.format(self.i)
+        self.resol = 0.002
+        self.time_window = 50e-9
+        pml_cells = 20
+        pml = self.resol * pml_cells
+        self.src_to_wall = round(random.uniform(0.1, 0.2), 2)
+        self.src_to_rx = 0.03
+        src_to_pml = 0.02
+
+        sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
+        domain_2d = [
+            float(sharp_domain[0] + 2 * pml + src_to_pml), 
+            float(sharp_domain[1] + 2 * pml + src_to_pml), 
+            0.002
+        ]
+
+        # Preprocess geometry
+
+        try:
+            with open('{}materials.txt'.format('Base_'), "w") as file:
+                file.write('#material: {} 0 1 0 wall\n'.format(self.wall_permittivity))
+                file.write('#material: {} 0 1 0 object\n'.format(self.object_permittivity))
+            self.preprocess(self.basefile)
+        except Exception as e:
+            print(e)
+
+        src_position = [0.10, 0.10, 0]
+        rx_position = [0.10 + self.src_to_rx, 0.10, 0]        
+        
+
+        src_steps = [self.square_size/ self.num_scan, 0, 0]
+        # print(src_steps)
+        config = f'''
+
+#title: Wall Object Imaging
+
+Configuration
+#domain: {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f}
+#dx_dy_dz: 0.002 0.002 0.002
+#time_window: {self.time_window}
+
+#pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
+
+Source - Receiver - Waveform
+#waveform: ricker 1 1.0e9 my_wave
+
+#hertzian_dipole: z {src_position[0]:.3f} {src_position[1]:.3f} {src_position[2]:.3f} my_wave 
+#rx: {rx_position[0]:.3f} {rx_position[1]:.3f} {rx_position[2]:.3f}
+#src_steps: {src_steps[0]:.3f} 0 0
+#rx_steps: {src_steps[0]:.3f} 0 0
+
+Geometry objects read
+
+#geometry_objects_read: {0.10:.3f} {0.10 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Base_materials.txt
+#geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
+        '''
+
+        with open(self.input, 'w') as f:
+            f.write(config)
+            f.close()
+        
+        api(self.input, 
+            n=self.num_scan - self.restart + 1, 
+            gpu=[0], 
+            restart=self.restart,
+            geometry_only=False, geometry_fixed=False)
+        
+        merge_files(str(self.input.replace('.in','')), True)
+        output_file =str(self.input.replace('.in',''))+ '_merged.out'
+        dt = 0
+
+        with h5py.File(output_file, 'r') as f1:
+            data1 = f1['rxs']['rx1']['Ez'][()]
+            dt = f1.attrs['dt']
+            f1.close()
+
+        rxnumber = 1
+        rxcomponent = 'Ez'
+        plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
+        
+        fig_width = 15
+        fig_height = 15
+
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+        plt.imshow(data1, cmap='gray', aspect='auto')
+        plt.axis('off')
+        ax.margins(0, 0)  # Remove any extra margins or padding
+        fig.tight_layout(pad=0)  # Remove any extra padding
+
+
+        os.rename(output_file, f'./Output/Base/Base{self.i}.out')
+        plt.savefig(f'./BaseImg/Base{self.i}' + ".png")
+
+    def run_2D(self):
+
+        # Run gprMax
+        self.input = './Input/Object{}.in'.format(self.i)
+        pml_cells = 20
+        pml = self.resol * pml_cells
+        src_to_pml = 0.02
+
+        sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
+        domain_2d = [
+            float(sharp_domain[0] + 2 * pml + src_to_pml), 
+            float(sharp_domain[1] + 2 * pml + src_to_pml), 
+            0.002
+        ]
+
+        # Preprocess geometry
+
+        try:
+            with open('{}materials.txt'.format('Obj_'), "w") as file:
+                file.write('#material: {} 0 1 0 wall\n'.format(self.wall_permittivity))
+                file.write('#material: {} 0 1 0 object\n'.format(self.object_permittivity))
+            self.preprocess(self.geofile)
+        except Exception as e:
+            print(e)
+
+        src_position = [0.10, 0.10, 0]
+        rx_position = [0.10 + self.src_to_rx, 0.10, 0]        
+        
+        
+        src_steps = [self.square_size/ self.num_scan, 0, 0]
+        config = f'''
+
+#title: Wall Object Imaging
+
+Configuration
+#domain: {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f}
+#dx_dy_dz: 0.002 0.002 0.002
+#time_window: {self.time_window}
+
+#pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
+
+Source - Receiver - Waveform
+#waveform: ricker 1 1.0e9 my_wave
+
+#hertzian_dipole: z {src_position[0]:.3f} {src_position[1]:.3f} {src_position[2]:.3f} my_wave 
+#rx: {rx_position[0]:.3f} {rx_position[1]:.3f} {rx_position[2]:.3f}
+#src_steps: {src_steps[0]:.3f} 0 0
+#rx_steps: {src_steps[0]:.3f} 0 0
+
+Geometry objects read
+
+#geometry_objects_read: {0.10:.3f} {0.10 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
+#geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Wall_2D 
+        '''
+
+        with open(self.input, 'w') as f:
+            f.write(config)
+            f.close()
+        
+        api(self.input, 
+            n=self.num_scan - self.restart + 1, 
+            gpu=[0], 
+            restart=self.restart,
+            geometry_only=False, geometry_fixed=False)
+        
+        merge_files(str(self.input.replace('.in','')), True)
+        output_file =str(self.input.replace('.in',''))+ '_merged.out'
+        dt = 0
+
+        with h5py.File(output_file, 'r') as f1:
+            data1 = f1['rxs']['rx1']['Ez'][()]
+            dt = f1.attrs['dt']
+            f1.close()
+
+        with h5py.File(f'./Output/Base/Base{self.i}.out', 'r') as f1:
+            data_source = f1['rxs']['rx1']['Ez'][()]
+
+        data1 = np.subtract(data1, data_source)
+
+        with h5py.File(output_file, 'w') as f_out:
+            f_out.attrs['dt'] = dt  # Set the time step attribute
+            f_out.create_dataset('rxs/rx1/Ez', data=data1)
+
+        # Draw data with normal plot
+        rxnumber = 1
+        rxcomponent = 'Ez'
+        plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
+        
+        fig_width = 15
+        fig_height = 15
+
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+        plt.imshow(data1, cmap='gray', aspect='auto')
+        plt.axis('off')
+        ax.margins(0, 0)  # Remove any extra margins or padding
+        fig.tight_layout(pad=0)  # Remove any extra padding
+
+        os.rename(output_file, f'./Output/Object/Obj{self.i}.out')
+        plt.savefig(f'./ObjImg/Obj{self.i}' + ".png")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Wall Scanning for Through Wall Imaging")      
+    parser.add_argument('--start', type=int, default=0, help='Start of the generated geometry')
+    parser.add_argument('--end', type=int, default=10, help='End of the generated geometry')
+    data = np.load('SL_ObjWall_0_2000.npz', allow_pickle=True)
+    args = parser.parse_args()
+    for i in range(args.start, args.end):
+        args.square_size = data['params'][i]['square_size']/100
+        args.wall_thickness = data['params'][i]['wall_thickness']/100
+        args.obj_width = data['params'][i]['rect_width']/100
+        args.obj_height = data['params'][i]['rect_height']/100
+        args.wall_permittivity = round(data['params'][i]['permittivity_wall'], 2)
+        args.object_permittivity = round(data['params'][i]['permittivity_object'],2) 
+    # start  adaptor
+        args.i = i
+        wallimg = Wall_Func(args=args)
+        wallimg.run_base()
+        # wallimg.view_geometry()
+        wallimg.run_2D()
+    print(args)

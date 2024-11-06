@@ -1,0 +1,24 @@
+
+
+#title: Wall Object Imaging
+
+Configuration
+#domain: 3.480 3.480 0.002
+#dx_dy_dz: 0.002 0.002 0.002
+#time_window: 5e-08
+
+#pml_cells: 20 20 0 20 20 0
+
+Source - Receiver - Waveform
+#waveform: ricker 1 1.0e9 my_wave
+
+#hertzian_dipole: z 0.100 0.100 0.000 my_wave 
+#rx: 0.130 0.100 0.000
+#src_steps: 1.660 0 0
+#rx_steps: 1.660 0 0
+
+Geometry objects read
+
+#geometry_objects_read: 0.100 0.300 0.000 Geometry/geometry_2d.h5 Base_materials.txt
+#geometry_objects_write: 0 0 0 3.480 3.480 0.002 Base 
+        
