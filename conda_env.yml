@@ -16,7 +16,6 @@ dependencies:
 
 - pip:
   - terminaltables
-  - numpy
   - tqdm
   - gprmax
  # - mpi4py
