@@ -344,7 +344,7 @@ if __name__ == "__main__":
     # start  adaptor
         args.i = i
         wallimg = Wall_Func(args=args)
-        wallimg.view_geometry()
-        # wallimg.run_base()
-        # wallimg.run_2D()
+        # wallimg.view_geometry()
+        wallimg.run_base()
+        wallimg.run_2D()
     print(args)
