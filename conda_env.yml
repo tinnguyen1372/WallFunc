@@ -9,12 +9,11 @@ dependencies:
 - h5py
 - jupyter
 - matplotlib
-- numpy=1.26.2=py311h24aa872_0
-- numpy-base=1.26.2=py311hbfb1bba_0y
+- numpy
+- numpy-base
 - pip
 - psutil
 - scipy
-- numpy
 
 - pip:
   - terminaltables
