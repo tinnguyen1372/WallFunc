@@ -17,6 +17,6 @@ dependencies:
 - pip:
   - terminaltables
   - tqdm
-  - gprmax==3.1.6
+  - gprmax
  # - mpi4py
  # - pycuda
