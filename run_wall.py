@@ -36,7 +36,7 @@ class Wall_Func():
         self.geofile = self.geofolder + '/geometry{}.png'.format(i)
 
         # Data load
-        self.pix = int(self.square_size/0.002)
+        self.pix = int(self.square_size/0.002) + 1
         if not os.path.exists('./Input'):
             os.makedirs('./Input')        
         if not os.path.exists('./Input/Base'):
@@ -58,10 +58,10 @@ class Wall_Func():
         import numpy.ma as ma
         # Create a 5000x5000 array initialized with -1
         # Open the HDF5 file
-        with h5py.File('./Geometry/geometry_2d.h5', 'r') as f:
+        with h5py.File('./Input/Base.h5', 'r') as f:
             data = f['data'][:]
         print(data.shape)
-        large_array = np.full((1740, 1740), -1, dtype=int)
+        large_array = np.full((1740, 1740), 1, dtype=int)
         # Print the raw data for reference
         # print(data)  # Use data[:] to display the full array
         data = np.squeeze(data, axis=2)     
@@ -69,11 +69,14 @@ class Wall_Func():
         large_array[0:0 + data.shape[0], 0:0 + data.shape[1]] = data
 
         # Create a masked array where values of -1 are masked (transparent)
-        masked_data = ma.masked_where(large_array == -1, large_array)
+        masked_data = ma.masked_where(large_array == 1, large_array)
 
         # Set the extent to match the pixel dimensions of the data (5000x5000)
         extent = [0, self.pix, 0, self.pix]
+        x,y = 0.1 /0.002 , 0.1 / 0.002
+        x1,y1 = 0.13/0.002 , 0.1/0.002
 
+        plt.plot(x, y, marker='o', color='red', markersize=1)
         # Generate the image with origin set to 'lower' to match the (0,0) origin at the bottom-left
         plt.imshow(masked_data, origin= 'lower', cmap='viridis', extent=extent)
 
@@ -98,7 +101,7 @@ class Wall_Func():
         import h5py
 
         img = Image.open(filename).convert('RGBA')  # Convert the image to RGBA mode
-        img.show()
+        # img.show()
         # Define the color map with a tolerance
         color_map = {
             (255, 255, 255): -1,  # White (transparent)
@@ -138,7 +141,7 @@ class Wall_Func():
         pml = self.resol * pml_cells
         self.src_to_wall = round(random.uniform(0.1, 0.2), 2)
         self.src_to_rx = 0.03
-        src_to_pml = 0.02
+        src_to_pml = 0.10
 
         sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
         domain_2d = [
@@ -157,11 +160,11 @@ class Wall_Func():
         except Exception as e:
             print(e)
 
-        src_position = [0.10, 0.10, 0]
-        rx_position = [0.10 + self.src_to_rx, 0.10, 0]        
+        src_position = [0.15, 0.15, 0]
+        rx_position = [0.15 + self.src_to_rx, 0.15, 0]        
         
 
-        src_steps = [self.square_size/ self.num_scan, 0, 0]
+        src_steps = [(self.square_size - 0.1)/ self.num_scan, 0, 0]
         # print(src_steps)
         config = f'''
 
@@ -184,7 +187,7 @@ Source - Receiver - Waveform
 
 Geometry objects read
 
-#geometry_objects_read: {0.10:.3f} {0.10 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Base_materials.txt
+#geometry_objects_read: {0.10:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Base_materials.txt
 #geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
         '''
 
