@@ -35,9 +35,9 @@ def visualize_geometry(geometry, wall_color, air_color, object_color):
     # Set the figure size
     plt.figure(figsize=(10, 10))
     
-    plt.imshow(geometry, cmap=cmap, origin='lower', extent=[-geometry.shape[0]//2, geometry.shape[0]//2, -geometry.shape[1]//2, geometry.shape[1]//2])
-    plt.axis('off')
-    plt.axis([-200, 200, -200, 200])
+    plt.imshow(geometry, cmap=cmap, origin='lower')
+    # plt.axis('off')
+    # plt.axis([-200, 200, -200, 200])
     plt.title('Geometry with Square Walls, Air Space, and Rectangle Object')
     plt.show()
 
@@ -50,7 +50,7 @@ def save_image(filename, geometry, square_size, wall_color, air_color, object_co
                            ])    
     # Set the figure size
     plt.figure(figsize=(10, 10))
-    plt.imshow(geometry, cmap=cmap, origin='lower', extent=[-geometry.shape[0]//2, geometry.shape[0]//2, -geometry.shape[1]//2, geometry.shape[1]//2])
+    plt.imshow(geometry, cmap=cmap, origin='lower')
     plt.xlabel('x(t)')
     plt.ylabel('y(t)')
     plt.axis('off')    
@@ -67,7 +67,7 @@ def save_base(filename, geometry, square_size, wall_color, air_color, object_col
                            ])    
     # Set the figure size
     plt.figure(figsize=(10, 10))
-    plt.imshow(geometry, cmap=cmap, origin='lower', extent=[-geometry.shape[0]//2, geometry.shape[0]//2, -geometry.shape[1]//2, geometry.shape[1]//2])
+    plt.imshow(geometry, cmap=cmap, origin='lower')
     plt.xlabel('x(t)')
     plt.ylabel('y(t)')
     plt.axis('off')    

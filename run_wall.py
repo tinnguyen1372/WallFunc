@@ -53,10 +53,11 @@ class Wall_Func():
             os.makedirs('./BaseImg')
         if not os.path.exists('./ObjImg'):
             os.makedirs('./ObjImg')
+
     def view_geometry(self):
         import numpy.ma as ma
         # Create a 5000x5000 array initialized with -1
-        large_array = np.full((1740, 1740), 1, dtype=int)
+        large_array = np.full((self.pix, self.pix), 1, dtype=int)
         # Open the HDF5 file
         with h5py.File('./Input/Base.h5', 'r') as f:
             data = f['data'][:]
@@ -71,10 +72,10 @@ class Wall_Func():
         masked_data = ma.masked_where(large_array == 1, large_array)
 
         # Set the extent to match the pixel dimensions of the data (5000x5000)
-        extent = [0, 1740, 0, 1740]
+        extent = [0, self.pix, 0, self.pix]
 
         # Generate the image with origin set to 'lower' to match the (0,0) origin at the bottom-left
-        plt.imshow(masked_data, cmap='viridis', extent=extent)
+        plt.imshow(masked_data, origin= 'lower', cmap='viridis', extent=extent)
 
         # # Add a colorbar for reference
         # cbar = plt.colorbar()
@@ -82,8 +83,8 @@ class Wall_Func():
         plt.axis('equal')
 
         # Set the plot limits to show the full 5000x5000 region
-        plt.xlim(0, 2000)
-        plt.ylim(0, 2000)
+        plt.xlim(0, self.pix)
+        plt.ylim(0, self.pix)
 
         # Display the plot with labeled axes
         plt.title("Geometry Visualization")
@@ -343,7 +344,7 @@ if __name__ == "__main__":
     # start  adaptor
         args.i = i
         wallimg = Wall_Func(args=args)
-        wallimg.run_base()
-        # wallimg.view_geometry()
-        wallimg.run_2D()
+        wallimg.view_geometry()
+        # wallimg.run_base()
+        # wallimg.run_2D()
     print(args)
