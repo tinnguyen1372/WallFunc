@@ -70,7 +70,7 @@ def save_base(filename, geometry, square_size, wall_color, air_color, object_col
     plt.imshow(geometry, cmap=cmap, origin='lower')
     plt.xlabel('x(t)')
     plt.ylabel('y(t)')
-    plt.axis('off')    
+    # plt.axis('off')    
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     plt.savefig('./Geometry/' + filename, format='png', dpi=square_size/10, bbox_inches='tight', pad_inches=0)
     plt.close()

@@ -18,7 +18,7 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
-        self.num_scan = 60
+        self.num_scan = 1
 
     
         self.square_size = args.square_size
@@ -57,19 +57,19 @@ class Wall_Func():
     def view_geometry(self):
         import numpy.ma as ma
         # Create a 5000x5000 array initialized with -1
-        large_array = np.full((self.pix, self.pix), 1, dtype=int)
         # Open the HDF5 file
-        with h5py.File('./Input/Base.h5', 'r') as f:
+        with h5py.File('./Geometry/geometry_2d.h5', 'r') as f:
             data = f['data'][:]
         print(data.shape)
+        large_array = np.full((1740, 1740), -1, dtype=int)
         # Print the raw data for reference
         # print(data)  # Use data[:] to display the full array
-        data = np.squeeze(data, axis=2)
+        data = np.squeeze(data, axis=2)     
         # Override the values in the large array with the data
         large_array[0:0 + data.shape[0], 0:0 + data.shape[1]] = data
 
         # Create a masked array where values of -1 are masked (transparent)
-        masked_data = ma.masked_where(large_array == 1, large_array)
+        masked_data = ma.masked_where(large_array == -1, large_array)
 
         # Set the extent to match the pixel dimensions of the data (5000x5000)
         extent = [0, self.pix, 0, self.pix]
@@ -98,7 +98,7 @@ class Wall_Func():
         import h5py
 
         img = Image.open(filename).convert('RGBA')  # Convert the image to RGBA mode
-
+        img.show()
         # Define the color map with a tolerance
         color_map = {
             (255, 255, 255): -1,  # White (transparent)
@@ -115,11 +115,10 @@ class Wall_Func():
 
         arr_2d = np.zeros((self.pix, self.pix), dtype=int)
         img_resized = img.resize((self.pix, self.pix))
-
-        for y in range(self.pix):
-            for x in range(self.pix):
+        for y in range(self.pix - 1, -1, -1):
+            for x in range(self.pix - 1, -1, -1):
                 pixel_color = img_resized.getpixel((x, y))
-                arr_2d[y, x] = match_color(pixel_color, color_map, tolerance)
+                arr_2d[self.pix - 1 - y, x] = match_color(pixel_color, color_map, tolerance)
 
         # np.savetxt('output_array.txt', arr_2d, fmt='%d', delimiter=' ')
         self.filename = 'geometry_2d.h5'
