@@ -6,7 +6,9 @@ from tools.plot_Ascan import mpl_plot as mpl_plot_Ascan
 from gprMax.receivers import Rx
 import h5py
 import numpy as np
+import numpy.ma as ma
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import argparse
 import random
 import os
@@ -18,7 +20,7 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
-        self.num_scan = 50
+        self.num_scan = 10
 
     
         self.square_size = args.square_size
@@ -28,7 +30,8 @@ class Wall_Func():
         self.object_permittivity = args.object_permittivity
         self.object_width = args.obj_width
         self.object_height = args.obj_height
-
+        self.src_to_wall = 0.05
+        self.src_to_rx = 0.03
         # Geometry load
         self.base = os.getcwd() + '/Geometry/Base'
         self.basefile = self.base + '/base{}.png'.format(i)
@@ -36,7 +39,7 @@ class Wall_Func():
         self.geofile = self.geofolder + '/geometry{}.png'.format(i)
 
         # Data load
-        self.pix = int(self.square_size/0.002) + 1
+        self.pix =int(self.square_size/0.002)
         if not os.path.exists('./Input'):
             os.makedirs('./Input')        
         if not os.path.exists('./Input/Base'):
@@ -54,45 +57,36 @@ class Wall_Func():
         if not os.path.exists('./ObjImg'):
             os.makedirs('./ObjImg')
 
+  
     def view_geometry(self):
-        import numpy.ma as ma
-        # Create a 5000x5000 array initialized with -1
-        # Open the HDF5 file
-        with h5py.File('./Input/Base.h5', 'r') as f:
+        # self.preprocess(self.basefile)
+        with h5py.File('./Geometry/geometry_2d.h5', 'r') as f:
             data = f['data'][:]
-        print(data.shape)
-        large_array = np.full((1740, 1740), 1, dtype=int)
-        # Print the raw data for reference
-        # print(data)  # Use data[:] to display the full array
-        data = np.squeeze(data, axis=2)     
-        # Override the values in the large array with the data
-        large_array[0:0 + data.shape[0], 0:0 + data.shape[1]] = data
+        
+        # Adjust large_array to match data's shape
+        data = np.squeeze(data, axis=2)  # Remove any singleton dimensions, if needed
+        large_array = np.full(data.shape, -1, dtype=int)
+        # Override the values in large_array with data
+        large_array[:data.shape[0], :data.shape[1]] = data
 
-        # Create a masked array where values of -1 are masked (transparent)
-        masked_data = ma.masked_where(large_array == 1, large_array)
+        # Mask the regions where the value is 1
+        masked_data = ma.masked_where(large_array == -1, large_array)
 
-        # Set the extent to match the pixel dimensions of the data (5000x5000)
-        extent = [0, self.pix, 0, self.pix]
-        x,y = 0.1 /0.002 , 0.1 / 0.002
-        x1,y1 = 0.13/0.002 , 0.1/0.002
-
-        plt.plot(x, y, marker='o', color='red', markersize=1)
-        # Generate the image with origin set to 'lower' to match the (0,0) origin at the bottom-left
-        plt.imshow(masked_data, origin= 'lower', cmap='viridis', extent=extent)
-
-        # # Add a colorbar for reference
-        # cbar = plt.colorbar()
-        # cbar.set_label('Value')
+        # Marker positions based on provided coordinates and scaling factor
+        # marker_x, marker_y = 0.15 * data.shape[0] /3.33, 0.15 * data.shape[0] /3.33
+        color_list = [
+            (1.0, 1.0, 1.0),  # White for -1
+            (1.0, 1.0, 0.0),  # Yellow for 0
+            (1.0, 0, 0.0)   # Red for 1
+        ]
+        custom_cmap = ListedColormap(color_list, name="custom_cmap")
+        # Plot the markers and masked data
+        # plt.plot(marker_x, marker_y, marker='o', color='red', markersize=5)
+        plt.imshow(masked_data, cmap='viridis')
         plt.axis('equal')
-
-        # Set the plot limits to show the full 5000x5000 region
-        plt.xlim(0, self.pix)
-        plt.ylim(0, self.pix)
-
-        # Display the plot with labeled axes
         plt.title("Geometry Visualization")
-        # plt.xlabel("X-axis (pixels)")
-        # plt.ylabel("Y-axis (pixels)")
+        plt.xlabel("X-axis (pixels)")
+        plt.ylabel("Y-axis (pixels)")
         plt.show()
 
     def preprocess(self, filename):
@@ -100,29 +94,36 @@ class Wall_Func():
         import numpy as np
         import h5py
 
-        img = Image.open(filename).convert('RGBA')  # Convert the image to RGBA mode
+        img = Image.open(filename).convert('RGB')  # Convert the image to RGB mode
         # img.show()
+        print(self.pix)
         # Define the color map with a tolerance
         color_map = {
             (255, 255, 255): -1,  # White (transparent)
             (255, 255, 0): 0,     # Yellow
-            (255, 102, 0): 1      # Orange
+            (255, 0, 0): 1      # Red
         }
-        tolerance = 5
+        def find_most_similar_color(pixel_color, color_map, threshold):
+            closest_color = None
 
-        def match_color(pixel, color_map, tolerance):
             for color, value in color_map.items():
-                if all(abs(pixel[i] - color[i]) <= tolerance for i in range(3)):
-                    return value
-            return -1  # Default value if no match is found
+                distance = np.linalg.norm(np.array(pixel_color) - np.array(color))
+                if distance < threshold:
+                    closest_color = color
+            if closest_color is not None:
+                return color_map[closest_color]
+            else:
+                return 0  # Return None when no similar color is found
+        # Define the threshold
+        threshold = 30  # Adjust this threshold value as needed
 
         arr_2d = np.zeros((self.pix, self.pix), dtype=int)
         img_resized = img.resize((self.pix, self.pix))
-        for y in range(self.pix - 1, -1, -1):
-            for x in range(self.pix - 1, -1, -1):
+        for y in range(self.pix):
+            for x in range(self.pix):
                 pixel_color = img_resized.getpixel((x, y))
-                arr_2d[self.pix - 1 - y, x] = match_color(pixel_color, color_map, tolerance)
-
+                arr_2d[y, x] = find_most_similar_color(pixel_color, color_map, threshold)
+        arr_2d = np.rot90(arr_2d, k=-1)
         # np.savetxt('output_array.txt', arr_2d, fmt='%d', delimiter=' ')
         self.filename = 'geometry_2d.h5'
         arr_3d = np.expand_dims(arr_2d, axis=2)
@@ -139,14 +140,12 @@ class Wall_Func():
         self.time_window = 50e-9
         pml_cells = 20
         pml = self.resol * pml_cells
-        self.src_to_wall = round(random.uniform(0.1, 0.2), 2)
-        self.src_to_rx = 0.03
         src_to_pml = 0.04
 
         sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
         domain_2d = [
-            float(sharp_domain[0] + 2 * pml + src_to_pml), 
-            float(sharp_domain[1] + 2 * pml + src_to_pml), 
+            float(sharp_domain[0] + 2 * pml + src_to_pml + 0.15), 
+            float(sharp_domain[1] + 2 * pml + src_to_pml + 0.15), 
             0.002
         ]
 
@@ -156,12 +155,12 @@ class Wall_Func():
             with open('{}materials.txt'.format('Base_'), "w") as file:
                 file.write('#material: {} 0 1 0 wall\n'.format(self.wall_permittivity))
                 file.write('#material: {} 0 1 0 object\n'.format(self.object_permittivity))
-            self.preprocess(self.basefile)
         except Exception as e:
             print(e)
+        self.preprocess(self.basefile)
 
-        src_position = [0.15, 0.15, 0]
-        rx_position = [0.15 + self.src_to_rx, 0.15, 0]        
+        src_position = [0.2, 0.15, 0]
+        rx_position = [0.2 + self.src_to_rx, 0.15, 0]        
         
 
         src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
@@ -178,7 +177,7 @@ Configuration
 #pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
 
 Source - Receiver - Waveform
-#waveform: ricker 1 1.0e9 my_wave
+#waveform: ricker 1 1e9 my_wave
 
 #hertzian_dipole: z {src_position[0]:.3f} {src_position[1]:.3f} {src_position[2]:.3f} my_wave 
 #rx: {rx_position[0]:.3f} {rx_position[1]:.3f} {rx_position[2]:.3f}
@@ -187,46 +186,58 @@ Source - Receiver - Waveform
 
 Geometry objects read
 
-#geometry_objects_read: {0.10:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Base_materials.txt
-#geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
+#geometry_objects_read: {0.15:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} ./Geometry/geometry_2d.h5 Base_materials.txt
+geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
+geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Base n
+
         '''
 
         with open(self.input, 'w') as f:
             f.write(config)
             f.close()
+        try:
+            api(self.input, 
+                n=self.num_scan - self.restart + 1, 
+                gpu=[0], 
+                restart=self.restart,
+                geometry_only=False, geometry_fixed=False)
+        except Exception as e:
+                api(self.input, 
+                n=self.num_scan - self.restart + 1, 
+                # gpu=[0], 
+                restart=self.restart,
+                geometry_only=False, geometry_fixed=False)
         
-        api(self.input, 
-            n=self.num_scan - self.restart + 1, 
-            gpu=[0], 
-            restart=self.restart,
-            geometry_only=False, geometry_fixed=False)
-        
-        merge_files(str(self.input.replace('.in','')), True)
-        output_file =str(self.input.replace('.in',''))+ '_merged.out'
-        dt = 0
+        try:
+            merge_files(str(self.input.replace('.in','')), True)
+            output_file =str(self.input.replace('.in',''))+ '_merged.out'
+            dt = 0
 
-        with h5py.File(output_file, 'r') as f1:
-            data1 = f1['rxs']['rx1']['Ez'][()]
-            dt = f1.attrs['dt']
-            f1.close()
+            with h5py.File(output_file, 'r') as f1:
+                data1 = f1['rxs']['rx1']['Ez'][()]
+                dt = f1.attrs['dt']
+                f1.close()
 
-        rxnumber = 1
-        rxcomponent = 'Ez'
-        plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
-        
-        fig_width = 15
-        fig_height = 15
+            rxnumber = 1
+            rxcomponent = 'Ez'
+            plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
+            
+            fig_width = 15
+            fig_height = 15
 
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+            fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-        plt.imshow(data1, cmap='gray', aspect='auto')
-        plt.axis('off')
-        ax.margins(0, 0)  # Remove any extra margins or padding
-        fig.tight_layout(pad=0)  # Remove any extra padding
+            plt.imshow(data1, cmap='gray', aspect='auto')
+            plt.axis('off')
+            ax.margins(0, 0)  # Remove any extra margins or padding
+            fig.tight_layout(pad=0)  # Remove any extra padding
 
 
-        os.rename(output_file, f'./Output/Base/Base{self.i}.out')
-        plt.savefig(f'./BaseImg/Base{self.i}' + ".png")
+            os.rename(output_file, f'./Output/Base/Base{self.i}.out')
+            plt.savefig(f'./BaseImg/Base{self.i}' + ".png")
+        except Exception as e:
+            print(e)
+
 
     def run_2D(self):
 
@@ -238,8 +249,8 @@ Geometry objects read
 
         sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
         domain_2d = [
-            float(sharp_domain[0] + 2 * pml + src_to_pml), 
-            float(sharp_domain[1] + 2 * pml + src_to_pml), 
+            float(sharp_domain[0] + 2 * pml + src_to_pml + 0.15), 
+            float(sharp_domain[1] + 2 * pml + src_to_pml + 0.15), 
             0.002
         ]
 
@@ -253,8 +264,8 @@ Geometry objects read
         except Exception as e:
             print(e)
 
-        src_position = [0.15, 0.15, 0]
-        rx_position = [0.15 + self.src_to_rx, 0.15, 0]        
+        src_position = [0.2, 0.15, 0]
+        rx_position = [0.2 + self.src_to_rx, 0.15, 0]        
         
         
         src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
@@ -270,7 +281,7 @@ Configuration
 #pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
 
 Source - Receiver - Waveform
-#waveform: ricker 1 1.0e9 my_wave
+#waveform: ricker 1 1e9 my_wave
 
 #hertzian_dipole: z {src_position[0]:.3f} {src_position[1]:.3f} {src_position[2]:.3f} my_wave 
 #rx: {rx_position[0]:.3f} {rx_position[1]:.3f} {rx_position[2]:.3f}
@@ -279,55 +290,66 @@ Source - Receiver - Waveform
 
 Geometry objects read
 
-#geometry_objects_read: {0.10:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
-#geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Wall_2D 
+#geometry_objects_read: {0.15:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
+geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Object 
+geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Object n
+
         '''
 
         with open(self.input, 'w') as f:
             f.write(config)
             f.close()
+        try:
+            api(self.input, 
+                n=self.num_scan - self.restart + 1, 
+                gpu=[0], 
+                restart=self.restart,
+                geometry_only=False, geometry_fixed=False)
+        except Exception as e:
+                api(self.input, 
+                n=self.num_scan - self.restart + 1, 
+                # gpu=[0], 
+                restart=self.restart,
+                geometry_only=False, geometry_fixed=False)
+        try:
         
-        api(self.input, 
-            n=self.num_scan - self.restart + 1, 
-            gpu=[0], 
-            restart=self.restart,
-            geometry_only=False, geometry_fixed=False)
-        
-        merge_files(str(self.input.replace('.in','')), True)
-        output_file =str(self.input.replace('.in',''))+ '_merged.out'
-        dt = 0
+            merge_files(str(self.input.replace('.in','')), True)
+            output_file =str(self.input.replace('.in',''))+ '_merged.out'
+            dt = 0
 
-        with h5py.File(output_file, 'r') as f1:
-            data1 = f1['rxs']['rx1']['Ez'][()]
-            dt = f1.attrs['dt']
-            f1.close()
+            with h5py.File(output_file, 'r') as f1:
+                data1 = f1['rxs']['rx1']['Ez'][()]
+                dt = f1.attrs['dt']
+                f1.close()
 
-        with h5py.File(f'./Output/Base/Base{self.i}.out', 'r') as f1:
-            data_source = f1['rxs']['rx1']['Ez'][()]
+            with h5py.File(f'./Output/Base/Base{self.i}.out', 'r') as f1:
+                data_source = f1['rxs']['rx1']['Ez'][()]
 
-        data1 = np.subtract(data1, data_source)
+            data1 = np.subtract(data1, data_source)
 
-        with h5py.File(output_file, 'w') as f_out:
-            f_out.attrs['dt'] = dt  # Set the time step attribute
-            f_out.create_dataset('rxs/rx1/Ez', data=data1)
+            with h5py.File(output_file, 'w') as f_out:
+                f_out.attrs['dt'] = dt  # Set the time step attribute
+                f_out.create_dataset('rxs/rx1/Ez', data=data1)
 
-        # Draw data with normal plot
-        rxnumber = 1
-        rxcomponent = 'Ez'
-        plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
-        
-        fig_width = 15
-        fig_height = 15
+            # Draw data with normal plot
+            rxnumber = 1
+            rxcomponent = 'Ez'
+            plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
+            
+            fig_width = 15
+            fig_height = 15
 
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+            fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-        plt.imshow(data1, cmap='gray', aspect='auto')
-        plt.axis('off')
-        ax.margins(0, 0)  # Remove any extra margins or padding
-        fig.tight_layout(pad=0)  # Remove any extra padding
+            plt.imshow(data1, cmap='gray', aspect='auto')
+            plt.axis('off')
+            ax.margins(0, 0)  # Remove any extra margins or padding
+            fig.tight_layout(pad=0)  # Remove any extra padding
 
-        os.rename(output_file, f'./Output/Object/Obj{self.i}.out')
-        plt.savefig(f'./ObjImg/Obj{self.i}' + ".png")
+            os.rename(output_file, f'./Output/Object/Obj{self.i}.out')
+            plt.savefig(f'./ObjImg/Obj{self.i}' + ".png")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
@@ -346,7 +368,7 @@ if __name__ == "__main__":
     # start  adaptor
         args.i = i
         wallimg = Wall_Func(args=args)
+        print(args)
         # wallimg.view_geometry()
         wallimg.run_base()
         wallimg.run_2D()
-    print(args)

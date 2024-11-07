@@ -96,7 +96,7 @@ if __name__ == '__main__':
     # Predefined colors
     wall_color = [1, 1, 0]   # wall color
     air_color = [1, 1, 1]  # air color
-    object_color = [1, 0.4, 0]  # object color
+    object_color = [1, 0, 0]  # object color
 
     import random
     import os

@@ -10,7 +10,7 @@ def print_peak_distances(peaks):
         print(f"Distance between peak {i} and peak {i+1}: {distance}")
 
 # Load and preprocess data
-b_scan = data[:, 30]
+b_scan = data[:, 3]
 dt = b_scan[1] - b_scan[0]
 # Initial peak detection to analyze reflection characteristics
 peaks, _ = find_peaks(b_scan, height=1, distance=400, prominence=0.1)
