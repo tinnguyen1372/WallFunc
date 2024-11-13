@@ -20,7 +20,8 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
-        self.num_scan = 10
+        self.num_scan = 20
+        # self.num_scan = 50
 
     
         self.square_size = args.square_size
@@ -96,7 +97,7 @@ class Wall_Func():
 
         img = Image.open(filename).convert('RGB')  # Convert the image to RGB mode
         # img.show()
-        print(self.pix)
+        # print(self.pix)
         # Define the color map with a tolerance
         color_map = {
             (255, 255, 255): -1,  # White (transparent)
@@ -159,8 +160,8 @@ class Wall_Func():
             print(e)
         self.preprocess(self.basefile)
 
-        src_position = [0.2, 0.15, 0]
-        rx_position = [0.2 + self.src_to_rx, 0.15, 0]        
+        src_position = [pml + src_to_pml + 0.2, self.square_size/2 - self.src_to_wall, 0]
+        rx_position = [pml + src_to_pml + 0.2 + self.src_to_rx, self.square_size/2 - self.src_to_wall, 0]        
         
 
         src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
@@ -186,7 +187,7 @@ Source - Receiver - Waveform
 
 Geometry objects read
 
-#geometry_objects_read: {0.15:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} ./Geometry/geometry_2d.h5 Base_materials.txt
+#geometry_objects_read: {pml + src_to_pml + 0.1:.3f} {self.square_size/2:.3f} {0:.3f} ./Geometry/geometry_2d.h5 Base_materials.txt
 geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
 geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Base n
 
@@ -249,8 +250,8 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
 
         sharp_domain = self.square_size + 2* self.src_to_rx, self.square_size + 2* self.src_to_rx
         domain_2d = [
-            float(sharp_domain[0] + 2 * pml + src_to_pml + 0.15), 
-            float(sharp_domain[1] + 2 * pml + src_to_pml + 0.15), 
+            float(sharp_domain[0] + 2 * pml + src_to_pml + 0.3), 
+            float(sharp_domain[1] + 2 * pml + src_to_pml + 0.3), 
             0.002
         ]
 
@@ -264,9 +265,8 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
         except Exception as e:
             print(e)
 
-        src_position = [0.2, 0.15, 0]
-        rx_position = [0.2 + self.src_to_rx, 0.15, 0]        
-        
+        src_position = [pml + src_to_pml + 0.2, self.square_size/2 - self.src_to_wall, 0]
+        rx_position = [pml + src_to_pml + 0.2 + self.src_to_rx, self.square_size/2 - self.src_to_wall, 0]        
         
         src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
         config = f'''
@@ -290,7 +290,7 @@ Source - Receiver - Waveform
 
 Geometry objects read
 
-#geometry_objects_read: {0.15:.3f} {0.15 + self.src_to_wall:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
+#geometry_objects_read: {pml + src_to_pml + 0.1:.3f} {self.square_size/2:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
 geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Object 
 geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Object n
 
