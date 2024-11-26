@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import argparse
 import random
 from matplotlib.colors import ListedColormap
-
+from scipy.interpolate import CubicSpline
 def create_geometry(square_size, air_size, rect_width, rect_height, wall_thickness):
     objwall_gap = 10  # gap between object and wall
     
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     wall_color = [1, 1, 0]   # wall color
     air_color = [1, 1, 1]  # air color
     object_color = [1, 0, 0]  # object color
-
+    x_center, y_center = None, None
     import random
     import os
 
@@ -115,12 +115,11 @@ if __name__ == '__main__':
         # Randomly generate values for the parameters within reasonable ranges
         square_size = random.randint(200, 350)  # Adjust range as needed
         wall_thickness = random.randint(10, 50)
-        rect_width = random.randint(10, 60)
-        rect_height = random.randint(10, 60)
+
 
         # Generate random floating-point values for permittivity
-        permittivity_wall = random.uniform(1.5, 10.0)
-        permittivity_object = random.uniform(1.5, 10.0)
+        permittivity_wall = random.uniform(4, 20.0)
+        permittivity_object = random.uniform(4, 40.0)
 
         # Create the folder if it doesn't exist
         if not os.path.exists('./Geometry'):
@@ -136,6 +135,8 @@ if __name__ == '__main__':
 
         args.square_size = square_size
         args.wall_thickness = wall_thickness
+        rect_width = random.randint(20, 60)
+        rect_height = random.randint(20, 60)
         args.rect_width = rect_width
         args.rect_height = rect_height
         args.filename = filename
@@ -149,15 +150,103 @@ if __name__ == '__main__':
         # Save the image
 
         save_base(args.base, geometry, args.square_size, wall_color, air_color, object_color)
-        geometry[rect_y:rect_y + rect_height, rect_x:rect_x + rect_width] = 2  # Rectangle is represented by 2
+
+        # Define the shape
+        shape = random.choice(['rectangle', 'triangle', 'circle'])
+
+        # Function to create the shape and extract edges
+        def create_shape_and_edges(shape):
+            edges = []
+            if shape == 'rectangle':
+                # Define rectangle edges
+                top_edge = [(x, rect_y) for x in range(rect_x, rect_x + rect_width)]
+                bottom_edge = [(x, rect_y + rect_height) for x in range(rect_x, rect_x + rect_width)]
+                left_edge = [(rect_x, y) for y in range(rect_y, rect_y + rect_height)]
+                right_edge = [(rect_x + rect_width, y) for y in range(rect_y, rect_y + rect_height)]
+
+                edges = top_edge + bottom_edge + left_edge + right_edge
+
+                # Fill rectangle in the geometry
+                geometry[rect_y:rect_y + rect_height, rect_x:rect_x + rect_width] = 2
+
+            elif shape == 'triangle':
+                x_center = rect_x + rect_width // 2
+                y_center = rect_y + rect_height // 2
+                # Define triangle edges (right triangle for simplicity)
+                for y in range(rect_height):
+                    for x in range(rect_width - y):
+                        if x == 0 or y == 0 or x == rect_width - y - 1:
+                            edges.append((rect_x + x, rect_y + y))
+                # Fill triangle in the geometry
+                for y in range(rect_height):
+                    for x in range(rect_width - y):
+                        geometry[rect_y + y, rect_x + x] = 2
+
+            elif shape == 'circle':
+                # Define circle edge
+                radius = min(rect_width, rect_height) // 2
+                x_center, y_center = rect_x + radius, rect_y + radius
+                for angle in np.linspace(0, 2 * np.pi, 100):
+                    x = int(x_center + radius * np.cos(angle))
+                    y = int(y_center + radius * np.sin(angle))
+                    edges.append((x, y))
+                # Fill circle in the geometry
+                for y in range(-radius, radius):
+                    for x in range(-radius, radius):
+                        if x**2 + y**2 <= radius**2:
+                            geometry[y_center + y, x_center + x] = 2
+
+            # Ensure the edges form a closed loop for periodic spline
+            edges.append(edges[0])
+
+            return edges
+
+        # Create shape and get edges
+        edges = create_shape_and_edges(shape)
         save_image(args.filename, geometry, args.square_size, wall_color, air_color, object_color)
 
+        # Extract x and y points
+        x_points, y_points = zip(*edges)
+
+        # Cubic spline interpolation
+        t = np.linspace(0, 1, len(x_points))  # Parametric variable
+        cs_x = CubicSpline(t, x_points, bc_type='periodic')
+        cs_y = CubicSpline(t, y_points, bc_type='periodic')
+
+        # Fine-grained t for smooth interpolation
+        t_fine = np.linspace(0, 1, 1000)
+        x_fine = cs_x(t_fine)
+        y_fine = cs_y(t_fine)
+
+        # Create the array: first element is the center, followed by the edge points
+        center_and_points = [(x_center, y_center)] + list(edges)
+
+        # # Plot the result
+        # plt.figure(figsize=(8, 8))
+        # plt.plot(x_points, y_points, 'o', label="Sample Points")
+        # # plt.plot(x_fine, y_fine, '-', label="Cubic Spline Interpolation")
+        # plt.axis('equal')
+        # plt.legend()
+        # plt.title(f"Cubic Spline Interpolation for {shape.capitalize()}")
+        # # plt.show()
         # Save the parameters
-        save_parameters(args.params_filename, square_size=args.square_size, wall_thickness=args.wall_thickness, 
-                        rect_width=args.rect_width, rect_height=args.rect_height, 
-                        rect_x=rect_x, rect_y=rect_y, wall_color=wall_color, air_color=air_color, object_color=object_color,
-                        permittivity_wall = permittivity_wall,
-                        permittivity_object = permittivity_object)
+        save_parameters(args.params_filename,     
+                shape=shape,
+                square_size=square_size,
+                wall_thickness=wall_thickness,
+                rect_width=rect_width,
+                rect_height=rect_height,
+                rect_x=rect_x,
+                rect_y=rect_y,
+                wall_color=wall_color,
+                air_color=air_color,
+                object_color=object_color,
+                permittivity_wall=permittivity_wall,
+                permittivity_object=permittivity_object,
+                center_and_points=center_and_points,
+                cse_x_fine=x_fine.tolist(),
+                cse_y_fine=y_fine.tolist(),
+            )
 
         # Visualize the geometry
         # visualize_geometry(geometry, wall_color, air_color, object_color)

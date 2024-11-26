@@ -7,7 +7,7 @@ def extract_data(file_name):
         data = f['rxs']['rx1']['Ez'][()]
     return data
 
-file_name = 'Base0.out'
+file_name = 'Base22.out'
 data = extract_data(file_name)
 output_file = 'extracted_data.txt'
 np.savetxt(output_file, data)
