@@ -20,7 +20,7 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
-        self.num_scan = 20
+        self.num_scan = 50
         # self.num_scan = 50
 
     
