@@ -1,7 +1,7 @@
 import numpy as np
 
 # Load the .npz file
-data = np.load('SL_ObjWall_0_2000.npz', allow_pickle=True)
+data = np.load('SL_ObjWall_0_1999.npz', allow_pickle=True)
 # Access the stored parameters
 # Access the stored parameters
 all_params = data['params']

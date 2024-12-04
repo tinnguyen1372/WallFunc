@@ -16,10 +16,11 @@ def create_geometry(square_size, air_size, rect_width, rect_height, wall_thickne
     geometry[air_start + wall_thickness:air_end, air_start:air_end] = 1  # Air is represented by 1
     # geometry[air_start:air_end, air_start:air_end - wall_thickness] = 1  # Air is represented by 1
     
-    # Generate random position for the rectangle within the air region
-    rect_x = random.randint(air_start + objwall_gap + wall_thickness, air_end - rect_width - objwall_gap - wall_thickness)
-    rect_y = (random.randint(air_start, air_end - rect_height))//2  + objwall_gap + wall_thickness
-    
+    # Generate random position for the rectangle within the air region with padding
+    rect_y = random.randint(air_start + wall_thickness + objwall_gap, air_end - rect_height - square_size//4)
+    rect_x = random.randint(air_start + int(6*square_size/22), air_end - rect_width - int(6*square_size/22))
+    # rect_y = random.randint(air_start + objwall_gap + wall_thickness + square_size//2, air_end - rect_height - objwall_gap - wall_thickness)
+    # rect_x = (random.randint(air_start + 30, air_end - rect_width -30))
     # Place the rectangle in the geometry
     
     return geometry, rect_x, rect_y
@@ -135,8 +136,8 @@ if __name__ == '__main__':
 
         args.square_size = square_size
         args.wall_thickness = wall_thickness
-        rect_width = random.randint(20, 60)
-        rect_height = random.randint(20, 60)
+        rect_width = random.randint(30, 50)
+        rect_height = random.randint(30, 50)
         args.rect_width = rect_width
         args.rect_height = rect_height
         args.filename = filename
@@ -163,7 +164,8 @@ if __name__ == '__main__':
                 bottom_edge = [(x, rect_y + rect_height) for x in range(rect_x, rect_x + rect_width)]
                 left_edge = [(rect_x, y) for y in range(rect_y, rect_y + rect_height)]
                 right_edge = [(rect_x + rect_width, y) for y in range(rect_y, rect_y + rect_height)]
-
+                x_center = rect_x + rect_width // 2
+                y_center = rect_y + rect_height // 2
                 edges = top_edge + bottom_edge + left_edge + right_edge
 
                 # Fill rectangle in the geometry
@@ -198,11 +200,11 @@ if __name__ == '__main__':
 
             # Ensure the edges form a closed loop for periodic spline
             edges.append(edges[0])
-
-            return edges
+            center_and_points = [(x_center, y_center)] + list(edges)
+            return edges, center_and_points
 
         # Create shape and get edges
-        edges = create_shape_and_edges(shape)
+        edges , center_and_points = create_shape_and_edges(shape)
         save_image(args.filename, geometry, args.square_size, wall_color, air_color, object_color)
 
         # Extract x and y points
@@ -219,7 +221,6 @@ if __name__ == '__main__':
         y_fine = cs_y(t_fine)
 
         # Create the array: first element is the center, followed by the edge points
-        center_and_points = [(x_center, y_center)] + list(edges)
 
         # # Plot the result
         # plt.figure(figsize=(8, 8))
