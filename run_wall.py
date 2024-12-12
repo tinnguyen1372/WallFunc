@@ -20,8 +20,8 @@ class Wall_Func():
         self.args = args
         self.i = args.i
         self.restart = 1
+        # self.num_scan = 20
         self.num_scan = 50
-        # self.num_scan = 50
 
     
         self.square_size = args.square_size
@@ -40,7 +40,7 @@ class Wall_Func():
         self.geofile = self.geofolder + '/geometry{}.png'.format(i)
 
         # Data load
-        self.pix =int(self.square_size/0.002)
+        self.pix =int(self.square_size/0.005)
         if not os.path.exists('./Input'):
             os.makedirs('./Input')        
         if not os.path.exists('./Input/Base'):
@@ -131,13 +131,13 @@ class Wall_Func():
 
         with h5py.File('./Geometry/' + self.filename, 'w') as file:
             dset = file.create_dataset("data", data=arr_3d)
-            file.attrs['dx_dy_dz'] = (0.002, 0.002, 0.002)
+            file.attrs['dx_dy_dz'] = (0.005, 0.005, 0.005)
 
     def run_base(self):
 
         # Run gprMax
         self.input = './Input/Base{}.in'.format(self.i)
-        self.resol = 0.002
+        self.resol = 0.005
         self.time_window = 50e-9
         pml_cells = 20
         pml = self.resol * pml_cells
@@ -147,7 +147,7 @@ class Wall_Func():
         domain_2d = [
             float(sharp_domain[0] + 2 * pml + src_to_pml + 0.15), 
             float(sharp_domain[1] + 2 * pml + src_to_pml + 0.15), 
-            0.002
+            0.005
         ]
 
         # Preprocess geometry
@@ -164,7 +164,7 @@ class Wall_Func():
         rx_position = [pml + src_to_pml + 0.2 + self.src_to_rx, self.square_size/2 - self.src_to_wall, 0]        
         
 
-        src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
+        src_steps = [(self.square_size-0.2)/ self.num_scan, 0, 0]
         # print(src_steps)
         config = f'''
 
@@ -172,7 +172,7 @@ class Wall_Func():
 
 Configuration
 #domain: {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f}
-#dx_dy_dz: 0.002 0.002 0.002
+#dx_dy_dz: 0.005 0.005 0.005
 #time_window: {self.time_window}
 
 #pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
@@ -189,7 +189,7 @@ Geometry objects read
 
 #geometry_objects_read: {pml + src_to_pml + 0.1:.3f} {self.square_size/2:.3f} {0:.3f} ./Geometry/geometry_2d.h5 Base_materials.txt
 geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Base 
-geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Base n
+geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.005 0.005 0.005 Base n
 
         '''
 
@@ -252,7 +252,7 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
         domain_2d = [
             float(sharp_domain[0] + 2 * pml + src_to_pml + 0.3), 
             float(sharp_domain[1] + 2 * pml + src_to_pml + 0.3), 
-            0.002
+            0.005
         ]
 
         # Preprocess geometry
@@ -268,14 +268,14 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
         src_position = [pml + src_to_pml + 0.2, self.square_size/2 - self.src_to_wall, 0]
         rx_position = [pml + src_to_pml + 0.2 + self.src_to_rx, self.square_size/2 - self.src_to_wall, 0]        
         
-        src_steps = [(self.square_size-0.1)/ self.num_scan, 0, 0]
+        src_steps = [(self.square_size-0.2)/ self.num_scan, 0, 0]
         config = f'''
 
 #title: Wall Object Imaging
 
 Configuration
 #domain: {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f}
-#dx_dy_dz: 0.002 0.002 0.002
+#dx_dy_dz: 0.005 0.005 0.005
 #time_window: {self.time_window}
 
 #pml_cells: {pml_cells} {pml_cells} 0 {pml_cells} {pml_cells} 0
@@ -292,7 +292,7 @@ Geometry objects read
 
 #geometry_objects_read: {pml + src_to_pml + 0.1:.3f} {self.square_size/2:.3f} {0:.3f} Geometry/geometry_2d.h5 Obj_materials.txt
 geometry_objects_write: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} Object 
-geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.002 0.002 0.002 Object n
+geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.005 0.005 0.005 Object n
 
         '''
 
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Wall Scanning for Through Wall Imaging")      
     parser.add_argument('--start', type=int, default=0, help='Start of the generated geometry')
     parser.add_argument('--end', type=int, default=15, help='End of the generated geometry')
-    data = np.load('SL_ObjWall_0_1999.npz', allow_pickle=True)
+    data = np.load('SL_ObjWall_0_699.npz', allow_pickle=True)
     args = parser.parse_args()
     for i in range(args.start, args.end):
         args.square_size = data['params'][i]['square_size']/100

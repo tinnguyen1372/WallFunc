@@ -114,12 +114,26 @@ if __name__ == '__main__':
         args.n = args.end + 1 - args.start
     for i in range(args.n):
         # Randomly generate values for the parameters within reasonable ranges
-        square_size = random.randint(200, 350)  # Adjust range as needed
-        wall_thickness = random.randint(10, 50)
+        square_size = 250  # Adjust range as needed
+        wall_thickness = random.randint(15, 30)
 
-
+        
         # Generate random floating-point values for permittivity
-        permittivity_wall = random.uniform(4, 20.0)
+        # Base permittivity values for wall materials
+        wall_materials = {
+            "Concrete": 5.24,
+            "Brick": 3.91,
+            "Plasterboard": 2.73,
+            "Wood": 1.99,
+            "Glass": 6.31,
+        }
+        variance_factor = 0.1  # Adjust this to 0.2 for higher variability
+
+        wall_material = random.choice(list(wall_materials.keys()))
+        base_permittivity = wall_materials[wall_material]
+        variance = base_permittivity * variance_factor
+        permittivity_wall = round(random.uniform(base_permittivity -variance, base_permittivity +variance), 2)    
+
         permittivity_object = random.uniform(4, 40.0)
 
         # Create the folder if it doesn't exist
@@ -231,23 +245,26 @@ if __name__ == '__main__':
         # plt.title(f"Cubic Spline Interpolation for {shape.capitalize()}")
         # # plt.show()
         # Save the parameters
-        save_parameters(args.params_filename,     
-                shape=shape,
-                square_size=square_size,
-                wall_thickness=wall_thickness,
-                rect_width=rect_width,
-                rect_height=rect_height,
-                rect_x=rect_x,
-                rect_y=rect_y,
-                wall_color=wall_color,
-                air_color=air_color,
-                object_color=object_color,
-                permittivity_wall=permittivity_wall,
-                permittivity_object=permittivity_object,
-                center_and_points=center_and_points,
-                cse_x_fine=x_fine.tolist(),
-                cse_y_fine=y_fine.tolist(),
-            )
+        save_parameters(
+            args.params_filename,     
+            shape=shape,
+            square_size=square_size,
+            wall_thickness=wall_thickness,
+            rect_width=rect_width,
+            rect_height=rect_height,
+            rect_x=rect_x,
+            rect_y=rect_y,
+            wall_color=wall_color,
+            air_color=air_color,
+            object_color=object_color,
+            permittivity_wall=permittivity_wall,
+            wall_material=wall_material,  # Fixed spacing
+            permittivity_object=permittivity_object,
+            center_and_points=center_and_points,
+            cse_x_fine=list(x_fine),  # Ensure proper conversion to list
+            cse_y_fine=list(y_fine),  # Ensure proper conversion to list
+        )
+
 
         # Visualize the geometry
         # visualize_geometry(geometry, wall_color, air_color, object_color)
