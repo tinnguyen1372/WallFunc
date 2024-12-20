@@ -356,7 +356,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Wall Scanning for Through Wall Imaging")      
     parser.add_argument('--start', type=int, default=0, help='Start of the generated geometry')
     parser.add_argument('--end', type=int, default=15, help='End of the generated geometry')
-    data = np.load('SL_ObjWall_0_699.npz', allow_pickle=True)
+    data = np.load('SL_ObjWall_700_1999.npz', allow_pickle=True)
     args = parser.parse_args()
     for i in range(args.start, args.end):
         args.square_size = data['params'][i]['square_size']/100

@@ -17,6 +17,8 @@ def create_geometry(square_size, air_size, rect_width, rect_height, wall_thickne
     # geometry[air_start:air_end, air_start:air_end - wall_thickness] = 1  # Air is represented by 1
     
     # Generate random position for the rectangle within the air region with padding
+    # rect_y = air_start + (air_size - rect_height) // 2
+    # rect_x = air_start + (air_size - rect_width) // 2
     rect_y = random.randint(air_start + wall_thickness + objwall_gap, air_end - rect_height - square_size//4)
     rect_x = random.randint(air_start + int(6*square_size/22), air_end - rect_width - int(6*square_size/22))
     # rect_y = random.randint(air_start + objwall_gap + wall_thickness + square_size//2, air_end - rect_height - objwall_gap - wall_thickness)

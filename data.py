@@ -2,13 +2,13 @@ import numpy as np
 
 # Load the .npz file
 import matplotlib.pyplot as plt
-data = np.load('SL_ObjWall_0_1999.npz', allow_pickle=True)
-
+data = np.load('SL_ObjWall_0_699.npz', allow_pickle=True)
+permittivity = []
 # Print all the keys (parameters) in the file
-points  = data['params'][60]['center_and_points']
+for i in range(40,50):
+    permittivity.append(data['params'][i]['wall_material'])
+print(permittivity)
 # Filter out None values
-filtered_points = [(x, y) for x, y in points if x is not None and y is not None]
-
 # Extract x and y coordinates
 # x_coords, y_coords = zip(*filtered_points)
 # Plot the points on a 300x300 dimension plot with equal aspect ratio
