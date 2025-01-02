@@ -5,7 +5,7 @@ import random
 from matplotlib.colors import ListedColormap
 from scipy.interpolate import CubicSpline
 def create_geometry(square_size, air_size, rect_width, rect_height, wall_thickness):
-    objwall_gap = 10  # gap between object and wall
+    objwall_gap = 15 # gap between object and wall
     
     # Initialize the square room with walls
     geometry = np.zeros((square_size, square_size), dtype=int)
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         filename = './Object/geometry{}.png'.format(args.start+i)
         base = './Base/base{}.png'.format(args.start+i)
 
-        params_filename = 'SL_ObjWall_{}_{}.npz'.format(args.start, args.end)
+        params_filename = 'SL_Obj4Wall_{}_{}.npz'.format(args.start, args.end)
 
 
         args.square_size = square_size
@@ -262,7 +262,7 @@ if __name__ == '__main__':
             permittivity_wall=permittivity_wall,
             wall_material=wall_material,  # Fixed spacing
             permittivity_object=permittivity_object,
-            center_and_points=center_and_points,
+            # center_and_points=center_and_points,
             cse_x_fine=list(x_fine),  # Ensure proper conversion to list
             cse_y_fine=list(y_fine),  # Ensure proper conversion to list
         )
