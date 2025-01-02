@@ -53,6 +53,8 @@ class Wall_Func():
             os.makedirs('./Output_4W/Base')
         if not os.path.exists('./Output_4W/Object'):
             os.makedirs('./Output_4W/Object')
+        if not os.path.exists('./Output_4W/WallObj'):
+            os.makedirs('./Output_4W/WallObj')
         if not os.path.exists('./BaseImg_4W'):
             os.makedirs('./BaseImg_4W')
         if not os.path.exists('./ObjImg_4W'):
@@ -317,7 +319,7 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
         
             merge_files(str(self.input.replace('.in','')), True)
             output_file =str(self.input.replace('.in',''))+ '_merged.out'
-            uncleaned_output_file = f'./WallObj_4W/Wall_Obj{self.i}.out'
+            uncleaned_output_file = f'./Output_4W/WallObj/Wall_Obj{self.i}.out'
             dt = 0
 
             with h5py.File(output_file, 'r') as f1:
@@ -337,6 +339,7 @@ geometry_view: 0 0 0 {domain_2d[0]:.3f} {domain_2d[1]:.3f} {domain_2d[2]:.3f} 0.
             plt = mpl_plot_Bscan("merged_output_data", data1, dt, rxnumber,rxcomponent)
             fig_width = 15
             fig_height = 15
+            fig, ax = plt.subplots(figsize=(fig_width, fig_height))
             plt.imshow(data1, cmap='gray', aspect='auto')
             plt.axis('off')
             ax.margins(0, 0)  # Remove any extra margins or padding
