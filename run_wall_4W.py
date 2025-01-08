@@ -379,7 +379,7 @@ if __name__ == "__main__":
     parser.add_argument('--end', type=int, default=15, help='End of the generated geometry')
     data = np.load('SL_Obj4Wall_700_1500.npz', allow_pickle=True)
     args = parser.parse_args()
-    for i in range(args.start, args.end):
+    for i in range(0, args.end - args.start + 1):
         args.square_size = data['params'][i]['square_size']/100
         args.wall_thickness = data['params'][i]['wall_thickness']/100
         args.obj_width = data['params'][i]['rect_width']/100
