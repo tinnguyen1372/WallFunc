@@ -387,7 +387,7 @@ if __name__ == "__main__":
         args.wall_permittivity = round(data['params'][i]['permittivity_wall'], 2)
         args.object_permittivity = round(data['params'][i]['permittivity_object'],2) 
     # start  adaptor
-        args.i = i + 700
+        args.i = i + args.start
         wallimg = Wall_Func(args=args)
         print(args)
         # wallimg.view_geometry()
